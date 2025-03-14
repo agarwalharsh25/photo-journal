@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.python310Full
+    pkgs.poetry
     pkgs.zlib
     pkgs.tk
     pkgs.tcl
@@ -11,5 +13,6 @@
     pkgs.libimagequant
     pkgs.lcms2
     pkgs.freetype
+    pkgs.pkg-config
   ];
 }
