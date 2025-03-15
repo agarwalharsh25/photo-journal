@@ -1,8 +1,17 @@
 from PIL import Image, ExifTags
-from datetime import datetime
 import base64
 from io import BytesIO
+import utils.utils as utils
+from typing import Optional, Dict, Any
 
+def load_image(image_path) -> Optional[Image.Image]:
+    try:
+        return Image.open(image_path)
+
+    except Exception as e:
+        print(f"Error loading image: {e}")
+        return None
+    
 def preprocess_image(image: Image.Image, max_size: int = 1600) -> Image.Image:
     img = image.copy()
 
@@ -24,14 +33,14 @@ def preprocess_image(image: Image.Image, max_size: int = 1600) -> Image.Image:
 
     return img
 
-def to_base64(image: Image.Image) -> str:
+def convert_image_to_base64(image: Image.Image) -> str:
     buffered = BytesIO()
     image.save(buffered, format="JPEG")
     img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
     return img_str
 
-def extract_image_metadata(image: Image.Image):
+def extract_image_metadata(image: Image.Image) -> Dict[str, str]:
     image_metadata = {}
     
     try:
@@ -43,7 +52,7 @@ def extract_image_metadata(image: Image.Image):
             tag_name = ExifTags.TAGS.get(tag, tag)
             
             if tag_name == "DateTimeOriginal":
-                image_metadata["date_time"] = datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
+                image_metadata["date_time"] = value
 
             elif tag_name == "GPSInfo":
                 gps_info = {}
@@ -59,14 +68,18 @@ def extract_image_metadata(image: Image.Image):
                 if not all([gps_latitude, gps_latitude_ref, gps_longitude, gps_longitude_ref]):
                     return image_metadata
 
-                print([gps_latitude, gps_latitude_ref, gps_longitude, gps_longitude_ref])
+                latitude = utils.convert_gps_coordinates_to_degrees(gps_latitude)
+                if gps_latitude_ref == "S":
+                    latitude = -latitude
+                longitude = utils.convert_gps_coordinates_to_degrees(gps_longitude)
+                if gps_longitude_ref == "W":
+                    longitude = -longitude
 
-        return image_metadata
-
+                location = utils.get_location(latitude, longitude)
+                if location:
+                    image_metadata["location"] = location
 
     except Exception as e:
         print(f"Error extracting EXIF data: {e}")
-        return image_metadata
-
-
-extract_image_metadata(Image.open("test.jpg"))
+    
+    return image_metadata
